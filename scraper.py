@@ -4,35 +4,69 @@ import re
 
 from bs4 import BeautifulSoup
 
-class SuggestionMaker:
+class Website:
+
+    def __init__(self, url):
+        # must add cleaning functionality
+        self.url = url
+        self.pages = []
+        self.suggestions = set()
+
+        # get home page
+        self.pages.append(Page(self.url))
+
+        # get all pages on homepage
+        self.pages[0].load()
+        for link in self.pages[0].internalLinks:
+            if link[:4] == 'http':
+                self.pages.append(Page(link))
+            else:
+                self.pages.append(Page(self.url + link))
+
+    def getPageURLs(self):
+        pageURLs = []
+        for page in self.pages:
+            pageURLs.append(page.url)
+        return pageURLs
+
+    def getSuggestions(self):
+        for page in self.pages:
+            self.suggestions.update(page.makeSuggestions())
+        return self.suggestions
+
+class Page:
 
     suggestionList = {
-    'musicbin': "You've embedded music files!  Try monetizing these with a little Scratch magic!",
-    'videobin': "You've embedded video files!  Try monetizing these with a little Scratch magic!",
-    'smarturl': "Looks like you're sending visitors through smarturl to an external music store.  Why not monetize directly with Scratch?",
-    'storelinks': "Your site has links to %s.  Using Scratch would enable you to cut out %s and make more profit.",
-    'itunesembed': "You've embedded an Itunes widget in your site.  You can sell your tracks straight from your site with Scratch!",
-    'soundcloudembed': "You've embedded a Sound Cloud player in your site.  You can sell your tracks straight from your site with Scratch!",
-    'spotifyembed': "You've embedded a Spotify player in your site.  You can sell your tracks straight from your site with Scratch!",
+        'musicbin': "You've embedded music files!  Try monetizing these with a little Scratch magic!",
+        'videobin': "You've embedded video files!  Try monetizing these with a little Scratch magic!",
+        'smarturl': "Looks like you're sending visitors through smarturl to an external music store.  Why not monetize directly with Scratch?",
+        'storelinks': "Your site has links to %s.  Using Scratch would enable you to cut out %s and make more profit.",
+        'itunesembed': "You've embedded an Itunes widget in your site.  You can sell your tracks straight from your site with Scratch!",
+        'soundcloudembed': "You've embedded a Sound Cloud player in your site.  You can sell your tracks straight from your site with Scratch!",
+        'spotifyembed': "You've embedded a Spotify player in your site.  You can sell your tracks straight from your site with Scratch!",
     }
 
     def __init__(self, url):
         self.url = url
-
-        try:
-            req = requests.get(url)
-        except:
-            print("Connection failed... check your url?")
-
-        self.bs = BeautifulSoup(req.text, 'lxml')
+        self.bs = BeautifulSoup()
         self.internalLinks = []
         self.externalLinks = []
         self.allLinks = []
         self.suggestions = set()
+        self.loaded = False
 
-        self.internalLinks = self.getInternalLinks(self.splitAddress(url)[0])
-        self.externalLinks = self.getExternalLinks(self.splitAddress(url)[0])
+    def load(self):
+        try:
+            req = requests.get(self.url)
+        except:
+            print("Connection failed.")
+            return False
+
+        self.bs = BeautifulSoup(req.text, 'lxml')
+        self.internalLinks = self.getInternalLinks(URLManip().splitAddress(self.url)[0])
+        self.externalLinks = self.getExternalLinks(URLManip().splitAddress(self.url)[0])
         self.allLinks = self.internalLinks + self.externalLinks
+        self.loaded = True
 
     def getInternalLinks(self, includeURL):
         internalLinks = []
@@ -42,8 +76,8 @@ class SuggestionMaker:
             if link.attrs['href'] is not None:
                 if link.attrs['href'] not in self.internalLinks:
                     print(link.attrs['href'])
-                    self.internalLinks.append(link.attrs['href'])
-        return self.internalLinks
+                    internalLinks.append(link.attrs['href'])
+        return internalLinks
 
     def getExternalLinks(self, excludeUrl):
         externalLinks = []
@@ -53,14 +87,13 @@ class SuggestionMaker:
             if link.attrs['href'] is not None:
                 if link.attrs['href'] not in self.externalLinks:
                     print(link.attrs['href'])
-                    self.externalLinks.append(link.attrs['href'])
-        return self.externalLinks
+                    externalLinks.append(link.attrs['href'])
+        return externalLinks
 
-    def splitAddress(self, address):
-        addressParts = address.replace("http://", "").split("/")
-        return addressParts
+    def makeSuggestions(self):
+        if not self.loaded:
+            self.load()
 
-    def getSuggestions(self):
         print('')
         print('---------------------------------------')
         print('URL')
@@ -92,6 +125,11 @@ class SuggestionMaker:
             if re.compile('(itunes)', re.I).search(link):
                 linktypes += "itunes"
             if re.compile('(google play)', re.I).search(link):
-                linktypes += "itunes"
+                linktypes += "google play"
                 self.suggestions.add(self.suggestionList['storelinks'] % (linktypes))
         return self.suggestions
+
+class URLManip:
+    def splitAddress(self, address):
+        addressParts = address.replace("http://", "").split("/")
+        return addressParts
