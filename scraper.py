@@ -72,22 +72,22 @@ class Page:
         internalLinks = []
         print("Internal links: ")
         #Finds all links beginning with "/"
-        for link in self.bs.findAll("a", href=re.compile("^(/|.*"+includeURL+")")):
+        for link in self.bs.findAll("a", href=re.compile("^(/|.*"+includeURL+")", re.I)):
             if link.attrs['href'] is not None:
                 if link.attrs['href'] not in self.internalLinks:
-                    print(link.attrs['href'])
-                    internalLinks.append(link.attrs['href'])
+                    print(link.attrs['href'].lower())
+                    internalLinks.append(link.attrs['href'].lower())
         return internalLinks
 
     def getExternalLinks(self, excludeUrl):
         externalLinks = []
         print("External links: ")
         #Finds all links that start with "http" or "www" that do not contain current url
-        for link in self.bs.findAll("a", href=re.compile("^(http|www)((?!"+excludeUrl+").)*$")):
+        for link in self.bs.findAll("a", href=re.compile("^(http|www)((?!"+excludeUrl+").)*$", re.I)):
             if link.attrs['href'] is not None:
                 if link.attrs['href'] not in self.externalLinks:
-                    print(link.attrs['href'])
-                    externalLinks.append(link.attrs['href'])
+                    print(link.attrs['href'].lower())
+                    externalLinks.append(link.attrs['href'].lower())
         return externalLinks
 
     def makeSuggestions(self):
