@@ -32,6 +32,7 @@ class Website:
     def getSuggestions(self):
         for page in self.pages:
             self.suggestions.update(page.makeSuggestions())
+        self.suggestions.add(self.pages[0].getStoreSuggestion())
         return self.suggestions
 
 class Page:
@@ -40,11 +41,14 @@ class Page:
         'musicbin': "You've embedded music files!  Try monetizing these with a little Scratch magic!",
         'videobin': "You've embedded video files!  Try monetizing these with a little Scratch magic!",
         'smarturl': "Looks like you're sending visitors through smarturl to an external music store.  Why not monetize directly with Scratch?",
-        'storelinks': "Your site has links to %s.  Using Scratch would enable you to cut out %s and make more profit.",
+        'storelinks': "Your site has links to %s.  Using Scratch would enable you to cut out music stores and make more profit.",
         'itunesembed': "You've embedded an Itunes widget in your site.  You can sell your tracks straight from your site with Scratch!",
         'soundcloudembed': "You've embedded a Sound Cloud player in your site.  You can sell your tracks straight from your site with Scratch!",
         'spotifyembed': "You've embedded a Spotify player in your site.  You can sell your tracks straight from your site with Scratch!",
+        'wordpress': "Your website is built in WordPress.  Did you know that Scratch has a WordPress plugin?"
     }
+
+    storeLinks = set()
 
     def __init__(self, url):
         self.url = url
@@ -120,14 +124,35 @@ class Page:
             except KeyError:
                 pass
         # if direct links to music stores
-        linktypes = ""
         for link in self.allLinks:
             if re.compile('(itunes)', re.I).search(link):
-                linktypes += "itunes"
-            if re.compile('(google play)', re.I).search(link):
-                linktypes += "google play"
-                self.suggestions.add(self.suggestionList['storelinks'] % (linktypes))
+                self.storeLinks.add("Itunes")
+            if re.compile('(play\.google)', re.I).search(link):
+                self.storeLinks.add("Google Play")
+            if re.compile('(soundcloud)', re.I).search(link):
+                self.storeLinks.add("Sound Cloud")
+        # if WordPress site
+        try:
+            meta = self.bs.find("meta", attrs={'name': 'generator'})
+            if re.compile('wordpress', re.I).search(meta.attrs['content']):
+                self.suggestions.add(self.suggestionList['wordpress'])
+        except KeyError:
+            pass
+
         return self.suggestions
+
+    def getStoreSuggestion(self):
+        if self.storeLinks:
+            storeString = ""
+            if len(self.storeLinks) == 1:
+                storeString = self.storeLinks.pop()
+            elif len(self.storeLinks) == 2:
+                storeString = self.storeLinks.pop() + " and " + self.storeLinks.pop()
+            else:
+                for i in range(len(self.storeLinks) - 1):
+                    storeString += self.storeLinks.pop() + ", "
+                storeString += "and " + self.storeLinks.pop()
+            return self.suggestionList['storelinks'] % (storeString)
 
 class URLManip:
     def splitAddress(self, address):
