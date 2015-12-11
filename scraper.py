@@ -1,8 +1,15 @@
 from __future__ import print_function
 import requests
 import re
+import time
+import csv
+from selenium import webdriver
+from selenium.webdriver.remote.webelement import WebElement
+from selenium.common.exceptions import StaleElementReferenceException
 
 from bs4 import BeautifulSoup
+
+binaryExtentions = [".mp3", ".aac", ".ogg", ".png", ".jpg", "jpeg", ".gif", ".mov", ".mp4"]
 
 class URLManip:
     def splitAddress(self, address):
@@ -79,17 +86,53 @@ class Page:
         self.loaded = False
 
     def load(self):
-        try:
-            req = requests.get(self.url)
-        except:
-            print("Connection failed.")
-            return False
+        # if not a binary file
+        if self.url[-4:] not in binaryExtentions:
+            try:
+                req = requests.get(self.url)
+            except:
+                print("Connection failed.")
+                return False
 
-        self.bs = BeautifulSoup(req.text, 'lxml')
-        self.internalLinks = self.getInternalLinks(URLManip().splitAddress(self.url)[0])
-        self.externalLinks = self.getExternalLinks(URLManip().splitAddress(self.url)[0])
-        self.allLinks = self.internalLinks + self.externalLinks
-        self.loaded = True
+            self.bs = BeautifulSoup(req.text, 'lxml')
+            self.internalLinks = self.getInternalLinks(urlManip.splitAddress(self.url)[0])
+            self.externalLinks = self.getExternalLinks(urlManip.splitAddress(self.url)[0])
+            self.allLinks = self.internalLinks + self.externalLinks
+            self.loaded = True
+
+            # if no links were loaded and it isn't a binary file, try looking for an iframe
+            if not self.allLinks:
+                iframe = self.bs.find("iframe")
+                if iframe:
+                    self.url = iframe.attrs['src']
+                    self.load()
+
+            # if that didn't work, try handling a client-side redirect
+            if not self.allLinks:
+                print("Handling client-side redirect...")
+                driver = webdriver.PhantomJS(executable_path="/usr/local/lib/node_modules/phantomjs/lib/phantom/bin/phantomjs")
+                driver.get(self.url)
+                self.waitForLoad(driver)
+                self.bs = BeautifulSoup(driver.page_source, 'lxml')
+                self.internalLinks = self.getInternalLinks(urlManip.splitAddress(self.url)[0])
+                self.externalLinks = self.getExternalLinks(urlManip.splitAddress(self.url)[0])
+                self.allLinks = self.internalLinks + self.externalLinks
+                driver.close()
+
+    def waitForLoad(self, driver):
+        source = driver.page_source
+        url = driver.current_url
+        count = 0
+        while True:
+            count += 1
+            if count > 16:
+                print("Timing out after 8 sec")
+                return
+            time.sleep(.5)
+            if source == driver.page_source or url == driver.current_url:
+                pass
+            else:
+                return
 
     def getInternalLinks(self, includeURL):
         internalLinks = []
