@@ -58,7 +58,9 @@ class Website:
     def getSuggestions(self):
         for page in self.pages:
             self.suggestions.update(page.makeSuggestions())
-        self.suggestions.add(self.pages[0].getStoreSuggestion())
+        storeSuggestion = self.pages[0].getStoreSuggestion()
+        if storeSuggestion:
+            self.suggestions.add(storeSuggestion)
         return self.suggestions
 
 class Page:
@@ -201,7 +203,6 @@ class Page:
             if re.compile('(soundcloud)', re.I).search(link):
                 self.storeLinks.add("Sound Cloud")
         # if WordPress site
-
         meta = self.bs.find("meta", attrs={'name': 'generator'})
         if meta:
             if re.compile('wordpress', re.I).search(meta.attrs['content']):
@@ -212,7 +213,9 @@ class Page:
     def getStoreSuggestion(self):
         if self.storeLinks:
             storeString = ""
-            if len(self.storeLinks) == 1:
+            if len(self.storeLinks == 0):
+                return storeString
+            elif len(self.storeLinks) == 1:
                 storeString = self.storeLinks.pop()
             elif len(self.storeLinks) == 2:
                 storeString = self.storeLinks.pop() + " and " + self.storeLinks.pop()
