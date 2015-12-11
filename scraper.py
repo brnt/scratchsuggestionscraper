@@ -4,6 +4,25 @@ import re
 
 from bs4 import BeautifulSoup
 
+class URLManip:
+    def splitAddress(self, address):
+        addressParts = address.replace("http://", "").split("/")
+        return addressParts
+
+    def isID(self, url):
+        if re.compile("#").search(url):
+            return True
+        return False
+
+    def cleanHref(self, ref):
+        if ref[:2] == "./":
+            ref = ref[2:]
+        elif ref[0] == "/":
+            ref = ref[1:]
+        return ref
+
+urlManip = URLManip()
+
 class Website:
 
     def __init__(self, url):
@@ -74,35 +93,42 @@ class Page:
 
     def getInternalLinks(self, includeURL):
         internalLinks = []
-        print("Internal links: ")
         #Finds all links beginning with "/"
         for link in self.bs.findAll("a", href=re.compile("^(/|.*"+includeURL+")", re.I)):
             if link.attrs['href'] is not None:
                 if link.attrs['href'] not in self.internalLinks:
-                    print(link.attrs['href'].lower())
-                    internalLinks.append(link.attrs['href'].lower())
+                    if not urlManip.isID(link.attrs['href']):
+                        internalLinks.append(urlManip.cleanHref(link.attrs['href']).lower())
         return internalLinks
 
     def getExternalLinks(self, excludeUrl):
         externalLinks = []
-        print("External links: ")
         #Finds all links that start with "http" or "www" that do not contain current url
         for link in self.bs.findAll("a", href=re.compile("^(http|www)((?!"+excludeUrl+").)*$", re.I)):
             if link.attrs['href'] is not None:
                 if link.attrs['href'] not in self.externalLinks:
-                    print(link.attrs['href'].lower())
-                    externalLinks.append(link.attrs['href'].lower())
+                    if not urlManip.isID(link.attrs['href']):
+                        externalLinks.append(urlManip.cleanHref(link.attrs['href']).lower())
         return externalLinks
 
-    def makeSuggestions(self):
-        if not self.loaded:
-            self.load()
-
+    def printLinks(self):
         print('')
         print('---------------------------------------')
         print('URL')
         print(self.url)
         print()
+        print("Internal Links:")
+        for link in self.internalLinks:
+            print(link)
+        print()
+        print("External Links:")
+        for link in self.externalLinks:
+            print(link)
+
+    def makeSuggestions(self):
+        if not self.loaded:
+            self.load()
+        self.printLinks()
         # if embedded binary files
         for link in self.allLinks:
             if re.compile('(.mp3|.aac|.ogg)', re.I).search(link):
@@ -132,12 +158,11 @@ class Page:
             if re.compile('(soundcloud)', re.I).search(link):
                 self.storeLinks.add("Sound Cloud")
         # if WordPress site
-        try:
-            meta = self.bs.find("meta", attrs={'name': 'generator'})
+
+        meta = self.bs.find("meta", attrs={'name': 'generator'})
+        if meta:
             if re.compile('wordpress', re.I).search(meta.attrs['content']):
                 self.suggestions.add(self.suggestionList['wordpress'])
-        except KeyError:
-            pass
 
         return self.suggestions
 
@@ -153,8 +178,3 @@ class Page:
                     storeString += self.storeLinks.pop() + ", "
                 storeString += "and " + self.storeLinks.pop()
             return self.suggestionList['storelinks'] % (storeString)
-
-class URLManip:
-    def splitAddress(self, address):
-        addressParts = address.replace("http://", "").split("/")
-        return addressParts
