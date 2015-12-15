@@ -3,6 +3,7 @@ import requests
 import re
 import time
 import csv
+from robotparser import RobotFileParser
 from selenium import webdriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import StaleElementReferenceException
@@ -40,10 +41,13 @@ urlManip = URLManip()
 class Website:
 
     def __init__(self, url):
-        # must add cleaning functionality
-        self.url = url
+        self.url = urlManip.cleanURL(url)
         self.pages = []
         self.suggestions = set()
+
+        # get robots.txt
+        rp = RobotFileParser(self.url + "robots.txt")
+        rp.read()
 
         # get home page
         self.pages.append(Page(self.url))
@@ -51,10 +55,13 @@ class Website:
         # get all pages on homepage
         self.pages[0].load()
         for link in self.pages[0].internalLinks:
-            if link[:4] == 'http':
-                self.pages.append(Page(link))
+            if rp.can_fetch("*", link):
+                if link[:4] != 'http':
+                    self.pages.append(Page(link))
+                else:
+                    self.pages.append(Page(self.url + link))
             else:
-                self.pages.append(Page(self.url + link))
+                print("Ignoring " + link + " based on robots.txt")
 
     def getPageURLs(self):
         pageURLs = []
@@ -101,7 +108,7 @@ class Page:
         # if not a binary file
         if self.url[-4:] not in binaryExtentions:
             try:
-                req = requests.get(urlManip.cleanURL(self.url))
+                req = requests.get(self.url)
             except:
                 print("Connection failed.")
                 return False
