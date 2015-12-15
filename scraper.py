@@ -21,6 +21,13 @@ class URLManip:
             return True
         return False
 
+    def cleanURL(self, url):
+        if url[:4] != "http":
+            url = "http://" + url
+        if url[-1:] != ("/" or "#"):
+            url += "/"
+        return url
+
     def cleanHref(self, ref):
         if ref[:2] == "./":
             ref = ref[2:]
@@ -70,10 +77,13 @@ class Page:
         'videobin': "You've embedded video files!  Try monetizing these with a little Scratch magic!",
         'smarturl': "Looks like you're sending visitors through smarturl to an external music store.  Why not monetize directly with Scratch?",
         'storelinks': "Your site has links to %s.  Using Scratch would enable you to cut out music stores and make more profit.",
+        'pdf': "You have a PDF on your site!  You can monetize your content with Scratch!",
         'itunesembed': "You've embedded an Itunes widget in your site.  You can sell your tracks straight from your site with Scratch!",
         'soundcloudembed': "You've embedded a Sound Cloud player in your site.  You can sell your tracks straight from your site with Scratch!",
         'spotifyembed': "You've embedded a Spotify player in your site.  You can sell your tracks straight from your site with Scratch!",
-        'wordpress': "Your website is built in WordPress.  Did you know that Scratch has a WordPress plugin?"
+        'youtubeembed': "You've embedded a YouTube player in your site.  Try selling your vids straight from your site with Scratch!",
+        'wordpress': "Your website is built in WordPress.  Did you know that Scratch has a WordPress plugin?",
+        'donations': "Using Scratch will enable you to accept microdonations!"
     }
 
     storeLinks = set()
@@ -91,7 +101,7 @@ class Page:
         # if not a binary file
         if self.url[-4:] not in binaryExtentions:
             try:
-                req = requests.get(self.url)
+                req = requests.get(urlManip.cleanURL(self.url))
             except:
                 print("Connection failed.")
                 return False
@@ -176,8 +186,19 @@ class Page:
         self.printLinks()
         # if embedded binary files
         for link in self.allLinks:
-            if re.compile('(.mp3|.aac|.ogg)', re.I).search(link):
+            if link[-4:] in [".mp3", ".aac", ".ogg"]:
                 self.suggestions.add(self.suggestionList['musicbin'])
+        # if pdf
+        for link in self.allLinks:
+            if link[-4:] == ".pdf":
+                self.suggestions.add(self.suggestionList['pdf'])
+        # if embedded pdf
+        for obj in self.bs.findAll('object'):
+            try:
+                if obj.attrs['data'][-4:] == ".pdf":
+                    self.suggestions.add(self.suggestionList['pdf'])
+            except KeyError:
+                pass
         # if links to smarturl
         for link in self.externalLinks:
             if re.compile('http://smarturl\.it.').search(link):
@@ -186,13 +207,16 @@ class Page:
         iframes = self.bs.findAll('iframe')
         for iframe in iframes:
             try:
-                if re.compile('https://w.soundcloud.com/player', re.I).search(iframe.attrs['src']):
+                src = iframe.attrs['src']
+                if re.compile('(http|https)://w\.soundcloud\.com/player', re.I).search(src):
                     self.suggestions.add(self.suggestionList['soundcloudembed'])
-                elif re.compile('https://embed.spotify.com/', re.I).search(iframe.attrs['src']):
+                elif re.compile('(http|https)://embed\.spotify\.com/', re.I).search(src):
                     self.suggestions.add(self.suggestionList['spotifyembed'])
-                elif re.compile('https://widgets.itunes.apple.com/', re.I).search(iframe.attrs['src']):
+                elif re.compile('(http|https)://widgets\.itunes\.apple\.com/', re.I).search(src):
                     self.suggestions.add(self.suggestionList['itunesembed'])
-            except KeyError:
+                elif re.compile('(http|https)://www\.youtube\.com/embed/', re.I).search(src):
+                    self.suggestions.add(self.suggestionList['youtubeembed'])
+            except KeyError: # if iframe doesn't have attribute 'src'
                 pass
         # if direct links to music stores
         for link in self.allLinks:
@@ -202,18 +226,22 @@ class Page:
                 self.storeLinks.add("Google Play")
             if re.compile('(soundcloud)', re.I).search(link):
                 self.storeLinks.add("Sound Cloud")
+            if re.compile('(bandcamp)', re.I).search(link):
+                self.storeLinks.add("Band Camp")
         # if WordPress site
         meta = self.bs.find("meta", attrs={'name': 'generator'})
         if meta:
             if re.compile('wordpress', re.I).search(meta.attrs['content']):
                 self.suggestions.add(self.suggestionList['wordpress'])
+        # donations are always an option
+        self.suggestions.add(self.suggestionList['donations'])
 
         return self.suggestions
 
     def getStoreSuggestion(self):
         if self.storeLinks:
             storeString = ""
-            if len(self.storeLinks == 0):
+            if len(self.storeLinks) == 0:
                 return storeString
             elif len(self.storeLinks) == 1:
                 storeString = self.storeLinks.pop()
