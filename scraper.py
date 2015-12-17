@@ -56,7 +56,7 @@ class Website:
         self.pages[0].load()
         for link in self.pages[0].internalLinks:
             if rp.can_fetch("*", link):
-                if link[:4] != 'http':
+                if link[:4] == 'http':
                     self.pages.append(Page(link))
                 else:
                     self.pages.append(Page(self.url + link))
@@ -158,7 +158,7 @@ class Page:
         #Finds all links beginning with "/"
         for link in self.bs.findAll("a", href=re.compile("^(/|.*"+includeURL+")", re.I)):
             if link.attrs['href'] is not None:
-                if link.attrs['href'] not in self.internalLinks:
+                if link.attrs['href'] not in internalLinks:
                     if not urlManip.isID(link.attrs['href']):
                         internalLinks.append(urlManip.cleanHref(link.attrs['href']).lower())
         return internalLinks
@@ -168,7 +168,7 @@ class Page:
         #Finds all links that start with "http" or "www" that do not contain current url
         for link in self.bs.findAll("a", href=re.compile("^(http|www)((?!"+excludeUrl+").)*$", re.I)):
             if link.attrs['href'] is not None:
-                if link.attrs['href'] not in self.externalLinks:
+                if link.attrs['href'] not in externalLinks:
                     if not urlManip.isID(link.attrs['href']):
                         externalLinks.append(urlManip.cleanHref(link.attrs['href']).lower())
         return externalLinks
