@@ -2,12 +2,14 @@ import os
 import requests
 from scraper import Website
 from flask import Flask, request, render_template
+from flask.ext.cors import cross_origin
 app = Flask(__name__)
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
+@cross_origin()
 def getSuggestions():
-    if request.method == 'POST':
-        url = request.form['website']
+    if request.args.get('url'):
+        url = request.args.get('url')
         site = Website(url)
         suggestions = site.getSuggestions()
 
@@ -32,5 +34,9 @@ def getSuggestions():
     else:
         return render_template("index.html")
 
+@app.route('/loader')
+def displayLoader():
+    return render_template("loader.html");
+
 if __name__ == '__main__':
-    app.run()
+    app.run(threaded=True)
