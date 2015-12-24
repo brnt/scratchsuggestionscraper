@@ -44,24 +44,36 @@ class Website:
         self.url = urlManip.cleanURL(url)
         self.pages = []
         self.suggestions = set()
+        self.loaded = False
+        try:
+            requests.get(self.url)
+            self.loaded = True
+        except IOError:
+            print("Connection failed.")
 
-        # get robots.txt
-        rp = RobotFileParser(self.url + "robots.txt")
-        rp.read()
+        # if the website can be loaded
+        if self.loaded == True:
 
-        # get home page
-        self.pages.append(Page(self.url))
+            # get robots.txt
+            rp = RobotFileParser(self.url + "robots.txt")
+            try:
+                rp.read()
+            except IOError:
+                print("robots.txt can't be found.")
 
-        # get all pages on homepage
-        self.pages[0].load()
-        for link in self.pages[0].internalLinks:
-            if rp.can_fetch("*", link):
-                if link[:4] == 'http':
-                    self.pages.append(Page(link))
+            # get home page
+            self.pages.append(Page(self.url))
+
+            # get all pages on homepage
+            self.pages[0].load()
+            for link in self.pages[0].internalLinks:
+                if rp.can_fetch("*", link):
+                    if link[:4] == 'http':
+                        self.pages.append(Page(link))
+                    else:
+                        self.pages.append(Page(self.url + link))
                 else:
-                    self.pages.append(Page(self.url + link))
-            else:
-                print("Ignoring " + link + " based on robots.txt")
+                    print("Ignoring " + link + " based on robots.txt")
 
     def getPageURLs(self):
         pageURLs = []
