@@ -2,7 +2,6 @@ from __future__ import print_function
 import requests
 import re
 import time
-import csv
 from robotparser import RobotFileParser
 from selenium import webdriver
 from selenium.webdriver.remote.webelement import WebElement
@@ -87,6 +86,7 @@ class Website:
         storeSuggestion = self.pages[0].getStoreSuggestion()
         if storeSuggestion:
             self.suggestions.add(storeSuggestion)
+        self.pages[0].closeDriver()
         return self.suggestions
 
 class Page:
@@ -104,6 +104,8 @@ class Page:
         'wordpress': "Your website is built in WordPress.  Did you know that Scratch has a WordPress plugin?",
         'donations': "Using Scratch will enable you to accept microdonations!"
     }
+
+    driver = webdriver.PhantomJS(executable_path="/usr/local/lib/node_modules/phantomjs/lib/phantom/bin/phantomjs")
 
     storeLinks = set()
 
@@ -142,29 +144,31 @@ class Page:
             # if that didn't work, try handling a client-side redirect
             if not self.allLinks:
                 print("Handling client-side redirect...")
-                driver = webdriver.PhantomJS(executable_path="/usr/local/lib/node_modules/phantomjs/lib/phantom/bin/phantomjs")
-                driver.get(self.url)
-                self.waitForLoad(driver)
-                self.bs = BeautifulSoup(driver.page_source, 'lxml')
+                self.driver.get(self.url)
+                self.waitForLoad()
+                self.bs = BeautifulSoup(self.driver.page_source, self.parser)
                 self.internalLinks = self.getInternalLinks(urlManip.splitAddress(self.url)[0])
                 self.externalLinks = self.getExternalLinks(urlManip.splitAddress(self.url)[0])
                 self.allLinks = self.internalLinks + self.externalLinks
-                driver.close()
 
-    def waitForLoad(self, driver):
-        source = driver.page_source
-        url = driver.current_url
+    def waitForLoad(self):
+        source = self.driver.page_source
+        url = self.driver.current_url
+        secCount = 5
         count = 0
         while True:
             count += 1
-            if count > 16:
-                print("Timing out after 8 sec")
+            if count > secCount * 2:
+                print("Timing out after %s sec" % (secCount))
                 return
             time.sleep(.5)
-            if source == driver.page_source or url == driver.current_url:
+            if source == self.driver.page_source or url == self.driver.current_url:
                 pass
             else:
                 return
+
+    def closeDriver(self):
+        self.driver.close()
 
     def getInternalLinks(self, includeURL):
         internalLinks = []
