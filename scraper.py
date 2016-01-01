@@ -114,6 +114,7 @@ class Page:
         self.externalLinks = []
         self.allLinks = []
         self.suggestions = set()
+        self.parser = 'lxml'
         self.loaded = False
 
     def load(self):
@@ -125,7 +126,7 @@ class Page:
                 print("Connection failed.")
                 return False
 
-            self.bs = BeautifulSoup(req.text, 'lxml')
+            self.bs = BeautifulSoup(req.text, self.parser)
             self.internalLinks = self.getInternalLinks(urlManip.splitAddress(self.url)[0])
             self.externalLinks = self.getExternalLinks(urlManip.splitAddress(self.url)[0])
             self.allLinks = self.internalLinks + self.externalLinks
@@ -170,9 +171,10 @@ class Page:
         #Finds all links beginning with "/"
         for link in self.bs.findAll("a", href=re.compile("^(/|.*"+includeURL+")", re.I)):
             if link.attrs['href'] is not None:
-                if link.attrs['href'] not in internalLinks:
-                    if not urlManip.isID(link.attrs['href']):
-                        internalLinks.append(urlManip.cleanHref(link.attrs['href']).lower())
+                href = urlManip.cleanHref(link.attrs['href']).lower()
+                if href not in internalLinks:
+                    if not urlManip.isID(href):
+                        internalLinks.append(href)
         return internalLinks
 
     def getExternalLinks(self, excludeUrl):
@@ -180,9 +182,10 @@ class Page:
         #Finds all links that start with "http" or "www" that do not contain current url
         for link in self.bs.findAll("a", href=re.compile("^(http|www)((?!"+excludeUrl+").)*$", re.I)):
             if link.attrs['href'] is not None:
-                if link.attrs['href'] not in externalLinks:
-                    if not urlManip.isID(link.attrs['href']):
-                        externalLinks.append(urlManip.cleanHref(link.attrs['href']).lower())
+                href = urlManip.cleanHref(link.attrs['href']).lower()
+                if href not in externalLinks:
+                    if not urlManip.isID(href):
+                        externalLinks.append(href)
         return externalLinks
 
     def printLinks(self):
