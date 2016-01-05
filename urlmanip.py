@@ -1,6 +1,7 @@
 import re
 
 class URLManip:
+    """Class implementing basic URL manipulation and checking"""
     def splitAddress(self, address):
         addressParts = address.replace("http://", "").split("/")
         return addressParts

@@ -20,7 +20,7 @@ binaryExtentions = [".mp3", ".aac", ".ogg", ".png", ".jpg", "jpeg", ".gif", ".mo
 urlManip = URLManip()
 
 class Website:
-
+    """Contains Page objects and site-wide suggestion list"""
     def __init__(self, url):
         self.url = urlManip.cleanURL(url)
         self.pages = []
@@ -74,6 +74,7 @@ class Website:
         return self.suggestions
 
 class Page:
+    """Contains and returns suggestions for a particular webpage.  Also loads and contains webpage's HTML."""
 
     suggestionList = {
         'musicbin': "You've embedded music files!  Try monetizing these with a little Scratch magic!",
