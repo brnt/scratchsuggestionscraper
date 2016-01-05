@@ -2,12 +2,17 @@ from __future__ import print_function
 import requests
 import re
 import time
+import logging
 from robotparser import RobotFileParser
 from selenium import webdriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import StaleElementReferenceException
 
 from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
+handler = logging.NullHandler()
+logger.addHandler(handler)
 
 binaryExtentions = [".mp3", ".aac", ".ogg", ".png", ".jpg", "jpeg", ".gif", ".mov", ".mp4"]
 
@@ -44,21 +49,23 @@ class Website:
         self.pages = []
         self.suggestions = set()
         self.loaded = False
+        logger.info("Loading %s..." % (self.url))
         try:
             requests.get(self.url)
             self.loaded = True
-        except IOError:
-            print("Connection failed.")
+        except IOError as e:
+            logger.error("%s cannot be loaded: %s" % (self.url, e))
 
         # if the website can be loaded
         if self.loaded == True:
+            logger.info("Load successful.")
 
             # get robots.txt
             rp = RobotFileParser(self.url + "robots.txt")
             try:
                 rp.read()
             except IOError:
-                print("robots.txt can't be found.")
+                logger.warning("robots.txt cannot be found.")
 
             # get home page
             self.pages.append(Page(self.url))
@@ -72,7 +79,7 @@ class Website:
                     else:
                         self.pages.append(Page(self.url + link))
                 else:
-                    print("Ignoring " + link + " based on robots.txt")
+                    logger.debug("Ignoring %s based on robots.txt" % link)
 
     def getPageURLs(self):
         pageURLs = []
@@ -124,8 +131,8 @@ class Page:
         if self.url[-4:] not in binaryExtentions:
             try:
                 req = requests.get(self.url)
-            except:
-                print("Connection failed.")
+            except IOError as e:
+                logger.error("Connection to %s failed: %s" % (self.url, e))
                 return False
 
             self.bs = BeautifulSoup(req.text, self.parser)
@@ -143,7 +150,7 @@ class Page:
 
             # if that didn't work, try handling a client-side redirect
             if not self.allLinks:
-                print("Handling client-side redirect...")
+                logger.debug("Handling client-side redirect...")
                 self.driver.get(self.url)
                 self.waitForLoad()
                 self.bs = BeautifulSoup(self.driver.page_source, self.parser)
@@ -159,7 +166,7 @@ class Page:
         while True:
             count += 1
             if count > secCount * 2:
-                print("Timing out after %s sec" % (secCount))
+                logger.debug("Timing out after %s sec" % secCount)
                 return
             time.sleep(.5)
             if source == self.driver.page_source or url == self.driver.current_url:
@@ -209,7 +216,7 @@ class Page:
     def makeSuggestions(self):
         if not self.loaded:
             self.load()
-        self.printLinks()
+        # self.printLinks() (uncomment for debugging)
         # if embedded binary files
         for link in self.allLinks:
             if link[-4:] in [".mp3", ".aac", ".ogg"]:

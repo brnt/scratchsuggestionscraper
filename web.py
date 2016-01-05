@@ -1,9 +1,26 @@
 import os
+import logging
 import requests
 from scraper import Website
 from flask import Flask, request, render_template
 from flask.ext.cors import cross_origin
 app = Flask(__name__)
+
+#configure local logger
+logger = logging.getLogger(__name__)
+streamhandler = logging.StreamHandler()
+filehandler = logging.FileHandler("scraper.log")
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s", datefmt='%m/%d/%Y %I:%M:%S %p')
+streamhandler.setFormatter(formatter)
+filehandler.setFormatter(formatter)
+logger.addHandler(streamhandler)
+logger.addHandler(filehandler)
+logger.setLevel(logging.INFO)
+
+#configure scraper logger
+logging.getLogger("scraper").addHandler(streamhandler)
+logging.getLogger("scraper").addHandler(filehandler)
+logging.getLogger("scraper").setLevel(logging.INFO)
 
 @app.route('/')
 @cross_origin()
@@ -25,12 +42,12 @@ def getSuggestions():
             try:
                 r = requests.post("https://api.pipedrive.com/v1/deals?api_token=" + token, data=payload)
                 if r.json()['success']:
-                    print url + " successfully logged in Pipedrive!"
+                    logger.info(url + " successfully logged in Pipedrive!")
                 else:
-                    print "Couldn't log " + url + " in Pipedrive!"
-                    print "Pipedrive error: " + r.json()['error']
-            except:
-                print "Couldn't connect to Pipedrive!"
+                    logger.error("Couldn't log " + url + " in Pipedrive!")
+                    logger.error("Pipedrive error: %s" % r.json()['error'])
+            except IOError as e:
+                logger.error("Couldn't connect to Pipedrive: %s" % e)
             return render_template("suggestions.html", suggestions=suggestions)
         else:
             return render_template("no_exist.html")
