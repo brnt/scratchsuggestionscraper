@@ -41,10 +41,12 @@ def getSuggestions():
                 exists = False
                 r = requests.get("https://api.pipedrive.com/v1/deals?filter_id="+ filter_id + "&api_token=" + token)
                 deals = r.json()
-                for deal in deals['data']:
-                    if deal['title'] == url:
-                        logger.info("Not logging %s as deal in Pipedrive. Already exists." % url)
-                        exists = True
+
+                if deals['data'] is not None:
+                    for deal in deals['data']:
+                        if deal['title'] == url:
+                            logger.info("Not logging %s as deal in Pipedrive. Already exists." % url)
+                            exists = True
 
                 # if it doesn't already exist, log search as deal in pipedrive
                 if not exists:
