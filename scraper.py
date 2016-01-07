@@ -7,7 +7,7 @@ from robotparser import RobotFileParser
 from urlmanip import URLManip
 from selenium import webdriver
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import NoSuchWindowException
 
 from bs4 import BeautifulSoup
 
@@ -35,7 +35,7 @@ class Website:
 
         # if the website can be loaded
         if self.loaded == True:
-            logger.info("Load successful.")
+            logger.info("Load successful. Generating suggestions...")
 
             # get robots.txt
             rp = RobotFileParser(self.url + "robots.txt")
@@ -66,12 +66,14 @@ class Website:
 
     def getSuggestions(self):
         for page in self.pages:
-            self.suggestions.update(page.makeSuggestions())
+            for suggestion in page.iterSuggestions():
+                if suggestion not in self.suggestions:
+                    self.suggestions.add(suggestion)
+                    yield suggestion
         storeSuggestion = self.pages[0].getStoreSuggestion()
         if storeSuggestion:
-            self.suggestions.add(storeSuggestion)
+            yield storeSuggestion
         self.pages[0].closeDriver()
-        return self.suggestions
 
 class Page:
     """Contains and returns suggestions for a particular webpage.  Also loads and contains webpage's HTML."""
@@ -153,7 +155,11 @@ class Page:
                 return
 
     def closeDriver(self):
-        self.driver.close()
+        try:
+            self.driver.close()
+        except NoSuchWindowException:
+            logger.debug("NoSuchWindowException... Selenium driver already closed?")
+            pass
 
     def getInternalLinks(self, includeURL):
         internalLinks = []
@@ -266,3 +272,5 @@ class Page:
                     storeString += self.storeLinks.pop() + ", "
                 storeString += "and " + self.storeLinks.pop()
             return self.suggestionList['storelinks'] % (storeString)
+        else:
+            return None
