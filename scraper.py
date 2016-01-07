@@ -92,7 +92,7 @@ class Page:
         'donations': "Using Scratch will enable you to accept microdonations!"
     }
 
-    driver = webdriver.PhantomJS(executable_path="/usr/local/lib/node_modules/phantomjs/lib/phantom/bin/phantomjs")
+    driver = webdriver.PhantomJS(executable_path="/app/vendor/phantomjs/bin/phantomjs")
 
     storeLinks = set()
 
