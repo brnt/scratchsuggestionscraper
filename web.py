@@ -67,7 +67,7 @@ def getSuggestions():
         site = Website(url)
         if site.loaded:
             def generator():
-                yield "<h1>Here are some suggestions:</h1><ul>"
+                yield "<ul>"
                 for suggestion in site.getSuggestions():
                     yield "<li>" + suggestion + "</li>"
                 yield "</ul>"

@@ -66,6 +66,7 @@ class Website:
 
     def getSuggestions(self):
         for page in self.pages:
+            page.load()
             for suggestion in page.iterSuggestions():
                 if suggestion not in self.suggestions:
                     self.suggestions.add(suggestion)
@@ -200,12 +201,12 @@ class Page:
     def makeSuggestions(self):
         if not self.loaded:
             self.load()
-        # self.printLinks() (uncomment for debugging)
         for suggestion in self.iterSuggestions():
             self.suggestions.add(suggestion)
         return self.suggestions
 
     def iterSuggestions(self):
+        # self.printLinks() (uncomment for debugging)
         # if embedded binary files
         for link in self.allLinks:
             if link[-4:] in [".mp3", ".aac", ".ogg"]:
