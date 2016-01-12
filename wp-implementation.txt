@@ -1,0 +1,82 @@
+Implementation in Wordpress
+
+Used Jquery Colorbox plugin by Arne Franken (https://wordpress.org/plugins/jquery-colorbox/).
+This is really just a WP implementation of the popular Colorbox
+(http://www.jacklmoore.com/colorbox/)
+
+-----------------------------------------------------------------------------
+This is the javascript code for controlling the lightbox (it should probably
+live in the <head>):
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script>
+	checkURL = function(url){
+		var re = /^((http(?:s)?\:\/\/)?[a-zA-Z0-9]+(?:(?:\.|\-)[a-zA-Z0-9]+)+(?:\:\d+)?(?:\/[\w\-]+)*(?:\/?|\/\w+\.[a-zA-Z]{2,4}(?:\?[\w]+\=[\w\-]+)?)?(?:\&[\w]+\=[\w\-]+)*)$/;
+		if (re.test(url)){
+			console.log("Valid URL!");
+			return true;
+		}
+		else{
+			console.log("Not a valid URL!");
+			return false;
+		}
+	}
+	$(document).ready(function(){
+		var xhr = new XMLHttpRequest();
+		$('#suggestionurl').bind("input", function(){
+			var url = $("#suggestionurl").val();
+			if (checkURL(url)) {
+				$(".suggestion_link").attr("href", "#suggestion-content")
+				$('.suggestion_link').colorbox({
+				  inline:true,
+					width:"620px",
+					height:"375px",
+					onComplete:function(){
+						xhr.open("GET", "https://scratch-scraper.herokuapp.com/?url=" + url);
+						xhr.onreadystatechange = function() {
+								console.log("State: " + xhr.readyState)
+								if (xhr.readyState == 3) {
+									$("#suggestion-list").html(xhr.responseText);
+								}
+								else if (xhr.readyState == 4) {
+									$('#dots').hide();
+								}
+						}
+						xhr.send();
+					},
+					onClosed:function(){
+						xhr.abort();
+						$("#suggestion-list").html('');
+						$("#dots").show();
+					}
+				});
+			}
+			else {
+				$(".suggestion_link").attr("href", "#");
+				$.colorbox.remove();
+			}
+		});
+	});
+	</script>
+
+----------------------------------------------------------------------
+Here is the HTML for the body:
+  
+<input id="suggestionurl" type="text" />
+
+<a class="suggestion_link cboxElement" href="#"><input type="button" value="Get Suggestions" /></a>
+<div style="display:none">
+  <div style="width:600px;" id="suggestion-content">
+    <div style="width:inherit;">
+      <h1>Here are some suggestions:</h1>
+    </div>
+    <div id="suggestion-list" style="width:inherit;"></div>
+    <div id="dots">
+      <img src="http://www.dartmouth-hitchcock.org/structural_images/loading_dots64.gif" style="height:7px; width:auto; display:block; margin:0 auto" />
+  </div>
+</div>
+
+NOTE: The loading-dots image should probably be hosted locally
+
+NOTE: The hidden div is hiding the inline div that will be used to populate the lightbox
+
