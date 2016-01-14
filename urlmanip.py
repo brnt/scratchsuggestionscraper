@@ -12,6 +12,7 @@ class URLManip:
         return False
 
     def cleanURL(self, url):
+        url = url.strip()
         if url[:4] != "http":
             url = "http://" + url
         if url[-1:] != ("/" or "#"):
@@ -19,6 +20,7 @@ class URLManip:
         return url
 
     def cleanHref(self, ref):
+        ref = ref.strip()
         if ref[:2] == "./":
             ref = ref[2:]
         elif ref[0] == "/":
