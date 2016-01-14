@@ -10,8 +10,41 @@ live in the <head>):
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script>
+activateColorbox = function(url){
+		var xhr = new XMLHttpRequest();
+		$(".suggestion-link").attr("href", "#suggestion-content")
+		$('.suggestion-link').colorbox({
+			inline:true,
+			width:"620px",
+			height:"375px",
+			onComplete:function(){
+				xhr.open("GET", "https://scratch-scraper.herokuapp.com/?url=" + url);
+				xhr.onreadystatechange = function() {
+						console.log("State: " + xhr.readyState)
+						if (xhr.readyState == 3) {
+							$("#suggestion-list").html(xhr.responseText);
+						}
+						else if (xhr.readyState == 4) {
+							$('#dots').hide();
+						}
+				}
+				xhr.send();
+			},
+			onClosed:function(){
+				xhr.abort();
+				$("#suggestion-list").html('');
+				$("#dots").show();
+			}
+		});
+		$("#suggestion-url").bind("keypress", function(e){
+      var code = e.keyCode || e.which;
+      if (code == 13) { //Enter keycode
+        $('.suggestion-link').trigger("click");
+      }
+    });
+	}
 	checkURL = function(url){
-		var re = /^((http(?:s)?\:\/\/)?[a-zA-Z0-9]+(?:(?:\.|\-)[a-zA-Z0-9]+)+(?:\:\d+)?(?:\/[\w\-]+)*(?:\/?|\/\w+\.[a-zA-Z]{2,4}(?:\?[\w]+\=[\w\-]+)?)?(?:\&[\w]+\=[\w\-]+)*)$/;
+		var re = /^\s*((http(?:s)?\:\/\/)?[a-zA-Z0-9]+(?:(?:\.|\-)[a-zA-Z0-9]+)+(?:\:\d+)?(?:\/[\w\-]+)*(?:\/?|\/\w+\.[a-zA-Z]{2,4}(?:\?[\w]+\=[\w\-]+)?)?(?:\&[\w]+\=[\w\-]+)*)\s*$/;
 		if (re.test(url)){
 			console.log("Valid URL!");
 			return true;
@@ -22,37 +55,13 @@ live in the <head>):
 		}
 	}
 	$(document).ready(function(){
-		var xhr = new XMLHttpRequest();
-		$('#suggestionurl').bind("input", function(){
-			var url = $("#suggestionurl").val();
+		$('#suggestion-url').bind("input", function(){
+			var url = $("#suggestion-url").val();
 			if (checkURL(url)) {
-				$(".suggestion_link").attr("href", "#suggestion-content")
-				$('.suggestion_link').colorbox({
-				  inline:true,
-					width:"620px",
-					height:"375px",
-					onComplete:function(){
-						xhr.open("GET", "https://scratch-scraper.herokuapp.com/?url=" + url);
-						xhr.onreadystatechange = function() {
-								console.log("State: " + xhr.readyState)
-								if (xhr.readyState == 3) {
-									$("#suggestion-list").html(xhr.responseText);
-								}
-								else if (xhr.readyState == 4) {
-									$('#dots').hide();
-								}
-						}
-						xhr.send();
-					},
-					onClosed:function(){
-						xhr.abort();
-						$("#suggestion-list").html('');
-						$("#dots").show();
-					}
-				});
+				activateColorbox(url);
 			}
 			else {
-				$(".suggestion_link").attr("href", "#");
+				$(".suggestion-link").attr("href", "#");
 				$.colorbox.remove();
 			}
 		});
@@ -62,9 +71,9 @@ live in the <head>):
 ----------------------------------------------------------------------
 Here is the HTML for the body:
   
-<input id="suggestionurl" type="text" />
+<input id="suggestion-url" type="text" />
 
-<a class="suggestion_link cboxElement" href="#"><input type="button" value="Get Suggestions" /></a>
+<a class="suggestion-link cboxElement" href="#"><input type="button" value="Get Suggestions" /></a>
 <div style="display:none">
   <div style="width:600px;" id="suggestion-content">
     <div style="width:inherit;">
@@ -73,6 +82,7 @@ Here is the HTML for the body:
     <div id="suggestion-list" style="width:inherit;"></div>
     <div id="dots">
       <img src="http://www.dartmouth-hitchcock.org/structural_images/loading_dots64.gif" style="height:7px; width:auto; display:block; margin:0 auto" />
+    </div>
   </div>
 </div>
 
