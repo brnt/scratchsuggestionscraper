@@ -76,11 +76,7 @@ def getSuggestions():
         else:
             return render_template("no_exist.html")
     else:
-        return render_template("index.html")
-
-@app.route('/loader')
-def displayLoader():
-    return render_template("loader.html");
+        return ('', 204)
 
 if __name__ == '__main__':
     app.run(threaded=True)
